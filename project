@@ -1,0 +1,71 @@
+from playsound import playsound
+import speech_recognition as sr
+from googletrans import Translator
+from gtts import gTTS
+import os
+import gradio as gr
+
+# List of languages and their codes
+languages = {
+    'afrikaans': 'af', 'albanian': 'sq', 'amharic': 'am', 'arabic': 'ar',
+    'armenian': 'hy', 'azerbaijani': 'az', 'basque': 'eu', 'belarusian': 'be',
+    'bengali': 'bn', 'bosnian': 'bs', 'bulgarian': 'bg', 'catalan': 'ca',
+    'chinese (simplified)': 'zh-cn', 'chinese (traditional)': 'zh-tw',
+    'croatian': 'hr', 'czech': 'cs', 'danish': 'da', 'dutch': 'nl',
+    'english': 'en', 'esperanto': 'eo', 'estonian': 'et', 'filipino': 'tl',
+    'finnish': 'fi', 'french': 'fr', 'german': 'de', 'greek': 'el',
+    'hindi': 'hi', 'hungarian': 'hu', 'icelandic': 'is', 'italian': 'it',
+    'japanese': 'ja', 'korean': 'ko', 'norwegian': 'no', 'polish': 'pl',
+    'portuguese': 'pt', 'romanian': 'ro', 'russian': 'ru', 'spanish': 'es',
+    'swedish': 'sv', 'turkish': 'tr', 'ukrainian': 'uk', 'vietnamese': 'vi','gujarati':'gu'
+}
+
+# Function to recognize speech and translate
+def translate_voice(audio_file, input_lang, output_lang):
+    r = sr.Recognizer()
+    
+    with sr.AudioFile(audio_file) as source:
+        print("Listening...")
+        audio = r.record(source)
+
+    try:
+        print("Recognizing...")
+        query = r.recognize_google(audio, language=languages[input_lang])
+        print(f"You said: {query}")
+
+        translator = Translator()
+        translation = translator.translate(query, dest=languages[output_lang])
+        text = translation.text
+        print(f"Translated: {text}")
+
+        # Convert text to speech
+        tts = gTTS(text=text, lang=languages[output_lang], slow=False)
+        tts.save("translated_voice.mp3")
+        playsound("translated_voice.mp3")
+        os.remove("translated_voice.mp3")
+
+        return text
+    except Exception as e:
+        print("Error:", e)
+        return "Could not process your request."
+
+# Gradio interface
+def gradio_interface():
+    with gr.Blocks() as demo:
+        gr.Markdown("# Voice Translation App")
+        input_lang = gr.Dropdown(list(languages.keys()), label="Select Input Language")
+        input_audio = gr.Audio(type="filepath", label="Input Audio")
+        output_lang = gr.Dropdown(list(languages.keys()), label="Select Output Language")
+        translate_button = gr.Button("Translate Voice")
+        output_text = gr.Textbox(label="Translation Output", interactive=False)
+
+        translate_button.click(
+            fn=translate_voice,
+            inputs=[input_audio, input_lang, output_lang],
+            outputs=output_text
+        )
+
+    demo.launch()
+
+# Run the Gradio interface
+gradio_interface()
